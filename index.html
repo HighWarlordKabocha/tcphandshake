@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TCP 3-Way Handshake Drag & Drop</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background:#0f172a; color:#e2e8f0; }
+    header { padding: 16px 20px; border-bottom: 1px solid rgba(226,232,240,.15); }
+    main { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; padding: 16px; }
+
+    .panel { background:#111827; border:1px solid rgba(226,232,240,.15); border-radius: 12px; padding: 14px; }
+    .panel h2 { margin: 0 0 8px; font-size: 16px; color:#93c5fd; }
+
+    .lane { position: relative; min-height: 420px; display:flex; flex-direction:column; gap: 10px; }
+    .step { display:grid; grid-template-columns: 1fr 120px 1fr; align-items:center; gap: 10px; }
+    .arrow {
+      text-align:center;
+      font-size: 18px;
+      opacity: .95;
+      user-select:none;
+    }
+    .slot {
+      min-height: 44px;
+      background: rgba(148,163,184,.08);
+      border: 1px dashed rgba(226,232,240,.35);
+      border-radius: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: rgba(226,232,240,.65);
+      padding: 6px;
+    }
+    .slot.good { border-style: solid; border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.12); color:#bbf7d0; }
+    .slot.bad  { border-style: solid; border-color: rgba(239,68,68,.7); background: rgba(239,68,68,.12); color:#fecaca; }
+
+    .tray { display:flex; flex-wrap:wrap; gap: 10px; margin-top: 10px; }
+    .card {
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(226,232,240,.18);
+      background: rgba(59,130,246,.18);
+      cursor: grab;
+      user-select:none;
+      font-weight: 600;
+    }
+    .card:active { cursor: grabbing; }
+    .card.used { opacity: .35; pointer-events:none; }
+
+    .controls { display:flex; gap: 10px; margin-top: 10px; }
+    button {
+      border: 1px solid rgba(226,232,240,.2);
+      background: rgba(226,232,240,.08);
+      color:#e2e8f0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor:pointer;
+    }
+    button:hover { background: rgba(226,232,240,.12); }
+    .hint { font-size: 13px; opacity:.8; margin-top: 8px; }
+    .ok  { color:#86efac; }
+    .no  { color:#fca5a5; }
+  </style>
+</head>
+<body>
+<header>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+    <div>
+      <div style="font-weight:800; font-size:18px;">TCP Handshake Visual Demo</div>
+      <div style="opacity:.75; font-size:13px;">Drag the TCP flag cards into the correct message slots.</div>
+    </div>
+    <div id="status" style="font-weight:700;"></div>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Client</h2>
+    <div class="hint">Acts as the initiator. Starts the connection.</div>
+    <div class="controls">
+      <button id="resetBtn">Reset</button>
+      <button id="checkBtn">Check</button>
+    </div>
+    <div class="hint">Tip: The 3-way handshake is <b>SYN → SYN-ACK → ACK</b>.</div>
+  </section>
+
+  <section class="panel lane" aria-label="Message lane">
+    <!-- Step 1 -->
+    <div class="step">
+      <div style="text-align:right; opacity:.85;">Client</div>
+      <div class="arrow">→</div>
+      <div style="opacity:.85;">Server</div>
+      <div class="slot" data-accept="SYN" data-step="1" style="grid-column: 1 / -1;">
+        Drop message #1 here
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div style="text-align:right; opacity:.85;">Client</div>
+      <div class="arrow">←</div>
+      <div style="opacity:.85;">Server</div>
+      <div class="slot" data-accept="SYN-ACK" data-step="2" style="grid-column: 1 / -1;">
+        Drop message #2 here
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+      <div style="text-align:right; opacity:.85;">Client</div>
+      <div class="arrow">→</div>
+      <div style="opacity:.85;">Server</div>
+      <div class="slot" data-accept="ACK" data-step="3" style="grid-column: 1 / -1;">
+        Drop message #3 here
+      </div>
+    </div>
+
+    <hr style="border:0; border-top:1px solid rgba(226,232,240,.12); width:100%;">
+
+    <!-- Optional teardown mini-exercise -->
+    <div class="step">
+      <div style="text-align:right; opacity:.85;">Client</div>
+      <div class="arrow">→</div>
+      <div style="opacity:.85;">Server</div>
+      <div class="slot" data-accept="FIN" data-step="4" style="grid-column: 1 / -1;">
+        Drop teardown start (FIN) here
+      </div>
+    </div>
+
+    <div class="step">
+      <div style="text-align:right; opacity:.85;">Client</div>
+      <div class="arrow">←</div>
+      <div style="opacity:.85;">Server</div>
+      <div class="slot" data-accept="ACK" data-step="5" style="grid-column: 1 / -1;">
+        Drop server response (ACK) here
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Cards</h2>
+    <div class="hint">Drag these into the lane:</div>
+    <div class="tray" id="tray">
+      <div class="card" draggable="true" data-msg="SYN">SYN</div>
+      <div class="card" draggable="true" data-msg="SYN-ACK">SYN-ACK</div>
+      <div class="card" draggable="true" data-msg="ACK">ACK</div>
+      <div class="card" draggable="true" data-msg="FIN">FIN</div>
+      <div class="card" draggable="true" data-msg="RST">RST</div>
+    </div>
+    <div class="hint">RST is a “reset” (often used to abort/deny), not part of the normal 3-way handshake.</div>
+  </section>
+</main>
+
+<script>
+  const statusEl = document.getElementById("status");
+  const cards = [...document.querySelectorAll(".card")];
+  const slots = [...document.querySelectorAll(".slot")];
+
+  let draggedMsg = null;
+  let draggedEl = null;
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text || "";
+    statusEl.className = cls || "";
+  }
+
+  // Drag start
+  cards.forEach(card => {
+    card.addEventListener("dragstart", (e) => {
+      draggedMsg = card.dataset.msg;
+      draggedEl = card;
+      e.dataTransfer.setData("text/plain", draggedMsg);
+    });
+  });
+
+  // Slot behavior
+  slots.forEach(slot => {
+    slot.addEventListener("dragover", (e) => e.preventDefault());
+
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const msg = e.dataTransfer.getData("text/plain") || draggedMsg;
+      if (!msg) return;
+
+      // allow replacing previous card
+      const prev = slot.dataset.filledBy;
+      if (prev) {
+        const prevCard = document.querySelector(`.card[data-msg="${prev}"]`);
+        if (prevCard) prevCard.classList.remove("used");
+      }
+
+      slot.textContent = msg;
+      slot.dataset.filledBy = msg;
+
+      // mark used (only if the card exists in tray)
+      const card = document.querySelector(`.card[data-msg="${msg}"]`);
+      if (card) card.classList.add("used");
+
+      // immediate feedback
+      validateSlot(slot);
+      setStatus("", "");
+    });
+  });
+
+  function validateSlot(slot) {
+    const accept = slot.dataset.accept;
+    const got = slot.dataset.filledBy;
+
+    slot.classList.remove("good", "bad");
+    if (!got) return;
+
+    if (got === accept) slot.classList.add("good");
+    else slot.classList.add("bad");
+  }
+
+  function checkAll() {
+    slots.forEach(validateSlot);
+    const allFilled = slots.every(s => s.dataset.filledBy);
+    const allCorrect = slots.every(s => s.dataset.filledBy === s.dataset.accept);
+
+    if (!allFilled) setStatus("Some slots are empty.", "no");
+    else if (allCorrect) setStatus("All correct ✅", "ok");
+    else setStatus("Not quite — some are incorrect.", "no");
+  }
+
+  function resetAll() {
+    slots.forEach(slot => {
+      slot.classList.remove("good", "bad");
+      delete slot.dataset.filledBy;
+      const n = slot.dataset.step;
+      slot.textContent = n <= 3 ? `Drop message #${n} here` : (n == 4 ? "Drop teardown start (FIN) here" : "Drop server response (ACK) here");
+    });
+    cards.forEach(c => c.classList.remove("used"));
+    setStatus("", "");
+  }
+
+  document.getElementById("checkBtn").addEventListener("click", checkAll);
+  document.getElementById("resetBtn").addEventListener("click", resetAll);
+
+  resetAll();
+</script>
+</body>
+</html>
