@@ -97,6 +97,7 @@
 </header>
 
 <main>
+  <!-- LEFT: Instructions -->
   <section class="panel">
     <h2>TCP Connections</h2>
     <div class="hint">
@@ -125,6 +126,7 @@
     </div>
   </section>
 
+  <!-- MIDDLE: Handshake Lane -->
   <section class="panel lane" aria-label="Message lane">
 
     <!-- Step 1: Client -> Server -->
@@ -149,3 +151,164 @@
         <div class="hyphen">-</div>
         <div class="slotPill" data-kind="part" data-part="2" data-accept="ACK" data-step="2b">Drop</div>
       </div>
+    </div>
+
+    <!-- Step 3: Client -> Server (FINAL EXCHANGE RESTORED) -->
+    <div class="step">
+      <div style="text-align:right; opacity:.85;">Client</div>
+      <div class="arrow">→</div>
+      <div style="opacity:.85;">Server</div>
+
+      <div class="pillRow">
+        <div class="slotPill" data-kind="single" data-accept="ACK" data-step="3">Drop</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- RIGHT: Cards (RESTORED) -->
+  <section class="panel">
+    <h2>Cards</h2>
+    <div class="hint muted">You may not need every card.</div>
+
+    <div class="tray" id="tray">
+      <!-- Two SYN -->
+      <div class="card" draggable="true" data-msg="SYN" data-cardid="syn1">SYN</div>
+      <div class="card" draggable="true" data-msg="SYN" data-cardid="syn2">SYN</div>
+
+      <!-- Two ACK -->
+      <div class="card" draggable="true" data-msg="ACK" data-cardid="ack1">ACK</div>
+      <div class="card" draggable="true" data-msg="ACK" data-cardid="ack2">ACK</div>
+
+      <!-- Distractors -->
+      <div class="card" draggable="true" data-msg="RST" data-cardid="rst1">RST</div>
+      <div class="card" draggable="true" data-msg="FIN" data-cardid="fin1">FIN</div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const statusEl = document.getElementById("status");
+  const cards = [...document.querySelectorAll(".card")];
+  const slots = [...document.querySelectorAll(".slotPill")];
+
+  // Light obfuscation (base64). Not secure—just prevents instant visual scanning in source.
+  // "FLAG{S3CR3T_H4ND5H4K3}"
+  const FLAG_B64 = "RkxBR3tTM0NSM1RfSDRORDVINEszfQ==";
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text || "";
+    statusEl.className = cls || "";
+  }
+
+  let dragged = { msg: null, cardId: null };
+
+  cards.forEach(card => {
+    card.addEventListener("dragstart", (e) => {
+      dragged.msg = card.dataset.msg;
+      dragged.cardId = card.dataset.cardid;
+      e.dataTransfer.setData("text/plain", JSON.stringify(dragged));
+    });
+  });
+
+  function getDragPayload(e) {
+    try {
+      const raw = e.dataTransfer.getData("text/plain");
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return dragged.msg ? dragged : null;
+    }
+  }
+
+  function markCardUsed(cardId, used) {
+    const card = document.querySelector(`.card[data-cardid="${cardId}"]`);
+    if (!card) return;
+    card.classList.toggle("used", !!used);
+  }
+
+  function allowDrop(el) {
+    el.addEventListener("dragover", (e) => e.preventDefault());
+  }
+
+  // Validation colors ONLY applied when Check is pressed
+  function validateSlot(slot) {
+    const accept = slot.dataset.accept;
+    const got = slot.dataset.filledMsg;
+
+    slot.classList.remove("good", "bad");
+    if (!got) return false;
+
+    if (got === accept) {
+      slot.classList.add("good");
+      return true;
+    } else {
+      slot.classList.add("bad");
+      return false;
+    }
+  }
+
+  slots.forEach(slot => {
+    allowDrop(slot);
+
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const payload = getDragPayload(e);
+      if (!payload) return;
+
+      // If this slot already had a card, free it
+      if (slot.dataset.filledCardId) {
+        markCardUsed(slot.dataset.filledCardId, false);
+      }
+
+      slot.dataset.filledMsg = payload.msg;
+      slot.dataset.filledCardId = payload.cardId;
+      slot.textContent = payload.msg;
+
+      markCardUsed(payload.cardId, true);
+
+      // No immediate red/green feedback; clear any previous check coloring
+      slot.classList.remove("good", "bad");
+      setStatus("", "");
+    });
+  });
+
+  function checkAll() {
+    const allFilled = slots.every(s => s.dataset.filledMsg);
+
+    if (!allFilled) {
+      setStatus("Some steps are still empty.", "no");
+      return;
+    }
+
+    // Apply red/green now
+    const allCorrect = slots.map(validateSlot).every(Boolean);
+
+    if (allCorrect) {
+      const flag = atob(FLAG_B64);
+      setStatus(`Connection ESTABLISHED ✅ Here's your flag: ${flag}`, "ok");
+    } else {
+      setStatus("Connection NOT established ❌ Try again.", "no");
+    }
+  }
+
+  function resetAll() {
+    slots.forEach(slot => {
+      slot.classList.remove("good", "bad");
+      if (slot.dataset.filledCardId) markCardUsed(slot.dataset.filledCardId, false);
+      delete slot.dataset.filledMsg;
+      delete slot.dataset.filledCardId;
+      slot.textContent = "Drop";
+    });
+
+    cards.forEach(c => c.classList.remove("used"));
+    setStatus("", "");
+  }
+
+  document.getElementById("checkBtn").addEventListener("click", checkAll);
+  document.getElementById("resetBtn").addEventListener("click", resetAll);
+
+  resetAll();
+</script>
+</body>
+</html>
