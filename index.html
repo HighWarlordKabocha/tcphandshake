@@ -44,7 +44,6 @@
       transition: all .15s ease;
     }
 
-    /* NEW: stronger indicator when filled */
     .slotPill.filled {
       border-style: solid;
       border-color: rgba(226,232,240,.55);
@@ -89,6 +88,27 @@
     .no  { color:#fca5a5; }
     .muted { opacity:.75; }
 
+    /* NEW: bottom-left status banner */
+    #statusBanner {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      z-index: 9999;
+      max-width: min(720px, calc(100vw - 32px));
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(226,232,240,.18);
+      background: rgba(17,24,39,.92);
+      backdrop-filter: blur(8px);
+      font-weight: 900;
+      line-height: 1.25;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      display: none; /* shown when message exists */
+      word-break: break-word;
+    }
+    #statusBanner.ok  { border-color: rgba(34,197,94,.55); color:#86efac; }
+    #statusBanner.no  { border-color: rgba(239,68,68,.55); color:#fca5a5; }
+
     @media (max-width: 1050px) {
       main { grid-template-columns: 1fr; }
       .lane { min-height: auto; }
@@ -102,7 +122,8 @@
       <div style="font-weight:900; font-size:18px;">TCP Three-Way Handshake</div>
       <div class="muted" style="font-size:13px;">Drag the TCP flag cards into the lane to form a valid handshake.</div>
     </div>
-    <div id="status" style="font-weight:900;"></div>
+    <!-- keep this element for compatibility, but it's no longer used for messages -->
+    <div id="status" style="font-weight:900; display:none;"></div>
   </div>
 </header>
 
@@ -131,8 +152,9 @@
     </div>
 
     <div class="controls">
-      <button id="resetBtn">Reset</button>
+      <!-- SWAPPED: Check on the left, Reset on the right -->
       <button id="checkBtn">Check</button>
+      <button id="resetBtn">Reset</button>
     </div>
   </section>
 
@@ -192,16 +214,26 @@
   </section>
 </main>
 
+<!-- NEW: bottom-left message banner -->
+<div id="statusBanner" aria-live="polite"></div>
+
 <script>
-  const statusEl = document.getElementById("status");
   const cards = [...document.querySelectorAll(".card")];
   const slots = [...document.querySelectorAll(".slotPill")];
 
-  const FLAG_B64 = "RkxBR3tTM0NSM1RfSDRORDVINEszfQ==";
+  const statusBannerEl = document.getElementById("statusBanner");
+
+  const BANNER_B64 = "RkxBR3tTM0NSM1RfSDRORDVINEszfQ==";
 
   function setStatus(text, cls) {
-    statusEl.textContent = text || "";
-    statusEl.className = cls || "";
+    statusBannerEl.textContent = text || "";
+    statusBannerEl.className = cls ? cls : "";
+    if (text) {
+      statusBannerEl.style.display = "block";
+      if (cls) statusBannerEl.classList.add(cls);
+    } else {
+      statusBannerEl.style.display = "none";
+    }
   }
 
   let dragged = { msg: null, cardId: null };
@@ -267,7 +299,7 @@
 
       markCardUsed(payload.cardId, true);
 
-      slot.classList.add("filled");   // 🔥 NEW VISUAL INDICATOR
+      slot.classList.add("filled");
       slot.classList.remove("good", "bad");
 
       setStatus("", "");
@@ -285,8 +317,8 @@
     const allCorrect = slots.map(validateSlot).every(Boolean);
 
     if (allCorrect) {
-      const flag = atob(FLAG_B64);
-      setStatus(`Connection ESTABLISHED ✅ Here's your flag: ${flag}`, "ok");
+      const BANNER = atob(BANNER_B64);
+      setStatus(`Connection ESTABLISHED ✅ ${BANNER}`, "ok");
     } else {
       setStatus("Connection NOT established ❌ Try again.", "no");
     }
@@ -294,7 +326,7 @@
 
   function resetAll() {
     slots.forEach(slot => {
-      slot.classList.remove("good", "bad", "filled"); // 🔥 remove filled state
+      slot.classList.remove("good", "bad", "filled");
       if (slot.dataset.filledCardId) markCardUsed(slot.dataset.filledCardId, false);
       delete slot.dataset.filledMsg;
       delete slot.dataset.filledCardId;
