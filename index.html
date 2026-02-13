@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>TCP 3-Way Handshake Drag & Drop</title>
+  <title>TCP Three-Way Handshake</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; background:#0f172a; color:#e2e8f0; }
     header { padding: 16px 20px; border-bottom: 1px solid rgba(226,232,240,.15); }
@@ -12,35 +12,25 @@
     .panel { background:#111827; border:1px solid rgba(226,232,240,.15); border-radius: 12px; padding: 14px; }
     .panel h2 { margin: 0 0 8px; font-size: 16px; color:#93c5fd; }
 
-    .lane { min-height: 420px; display:flex; flex-direction:column; gap: 14px; }
+    .lane { min-height: 420px; display:flex; flex-direction:column; gap: 18px; }
     .step { display:grid; grid-template-columns: 1fr 120px 1fr; align-items:center; gap: 10px; }
     .arrow { text-align:center; font-size: 18px; opacity: .95; user-select:none; }
 
-    .slot {
-      min-height: 44px;
-      background: rgba(148,163,184,.08);
-      border: 1px dashed rgba(226,232,240,.35);
-      border-radius: 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color: rgba(226,232,240,.65);
-      padding: 6px;
-    }
-    .slot.good { border-style: solid; border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.12); color:#bbf7d0; }
-    .slot.bad  { border-style: solid; border-color: rgba(239,68,68,.7); background: rgba(239,68,68,.12); color:#fecaca; }
-
-    /* Composite (SYN-ACK) slot */
-    .comboWrap{
+    /* "Pill" slots and cards */
+    .pillRow {
+      grid-column: 1 / -1;
       display:flex;
       align-items:center;
       justify-content:center;
       gap: 10px;
-      width: 100%;
+      padding: 10px 0;
+      border-radius: 12px;
+      background: rgba(148,163,184,.06);
+      border: 1px solid rgba(226,232,240,.12);
     }
-    .miniSlot{
-      min-width: 88px;
-      min-height: 40px;
+    .slotPill {
+      min-width: 110px;
+      min-height: 42px;
       background: rgba(148,163,184,.08);
       border: 1px dashed rgba(226,232,240,.35);
       border-radius: 999px;
@@ -48,12 +38,14 @@
       align-items:center;
       justify-content:center;
       color: rgba(226,232,240,.65);
-      padding: 4px 10px;
+      padding: 4px 12px;
+      font-weight: 700;
+      user-select:none;
     }
-    .miniSlot.good { border-style: solid; border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.12); color:#bbf7d0; }
-    .miniSlot.bad  { border-style: solid; border-color: rgba(239,68,68,.7); background: rgba(239,68,68,.12); color:#fecaca; }
+    .slotPill.good { border-style: solid; border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.12); color:#bbf7d0; }
+    .slotPill.bad  { border-style: solid; border-color: rgba(239,68,68,.7); background: rgba(239,68,68,.12); color:#fecaca; }
 
-    .hyphen { opacity:.7; font-weight:800; }
+    .hyphen { opacity:.7; font-weight:900; }
 
     .tray { display:flex; flex-wrap:wrap; gap: 10px; margin-top: 10px; }
     .card {
@@ -63,7 +55,8 @@
       background: rgba(59,130,246,.18);
       cursor: grab;
       user-select:none;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: .3px;
     }
     .card:active { cursor: grabbing; }
     .card.used { opacity: .35; pointer-events:none; }
@@ -76,72 +69,92 @@
       padding: 10px 12px;
       border-radius: 10px;
       cursor:pointer;
+      font-weight: 700;
     }
     button:hover { background: rgba(226,232,240,.12); }
-    .hint { font-size: 13px; opacity:.8; margin-top: 8px; }
+
+    .hint { font-size: 13px; opacity:.85; margin-top: 8px; line-height: 1.35; }
+    .hint h3 { margin: 10px 0 4px; font-size: 14px; color:#cbd5e1; }
     .ok  { color:#86efac; }
     .no  { color:#fca5a5; }
+    .muted { opacity:.75; }
+
+    @media (max-width: 1050px) {
+      main { grid-template-columns: 1fr; }
+      .lane { min-height: auto; }
+    }
   </style>
 </head>
 <body>
 <header>
   <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
     <div>
-      <div style="font-weight:800; font-size:18px;">TCP Handshake Visual Demo</div>
-      <div style="opacity:.75; font-size:13px;">Drag the TCP flag cards into the correct message slots.</div>
+      <div style="font-weight:900; font-size:18px;">TCP Three-Way Handshake</div>
+      <div class="muted" style="font-size:13px;">Drag the TCP flag cards into the lane to form a valid handshake.</div>
     </div>
-    <div id="status" style="font-weight:800;"></div>
+    <div id="status" style="font-weight:900;"></div>
   </div>
 </header>
 
 <main>
   <section class="panel">
-    <h2>Client</h2>
-    <div class="hint">Initiates the connection.</div>
+    <h2>TCP Connections</h2>
+    <div class="hint">
+      TCP is a communication method that computers use to reliably send data over a network.
+
+      <h3>The TCP Three-Way Handshake</h3>
+      To start a connection, TCP uses a process called the three-way handshake.
+      This is a short exchange of messages between a client and a server that confirms both sides are ready to communicate.
+
+      <h3>Your Challenge</h3>
+      Your task is to complete the three-way handshake by dragging and dropping the correct flag cards into each step.
+      Arrange the cards so the connection is properly established.
+
+      <h3>Check Your Work</h3>
+      Click <b>Check</b> to see if your answer is correct.
+      Click <b>Reset</b> to try again.
+    </div>
+
     <div class="controls">
       <button id="resetBtn">Reset</button>
       <button id="checkBtn">Check</button>
     </div>
-    <div class="hint">Handshake order: <b>SYN → SYN-ACK → ACK</b></div>
-    <div class="hint">In this version, <b>SYN-ACK is built by dropping SYN then ACK</b> into the 2-part slot.</div>
   </section>
 
   <section class="panel lane" aria-label="Message lane">
 
-    <!-- Step 1: Client -> Server SYN -->
+    <!-- Step 1: Client -> Server -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">→</div>
       <div style="opacity:.85;">Server</div>
 
-      <div class="slot" data-kind="single" data-accept="SYN" data-step="1" style="grid-column: 1 / -1;">
-        Drop message #1 (SYN) here
+      <div class="pillRow">
+        <div class="slotPill" data-kind="single" data-accept="SYN" data-step="1">Drop</div>
       </div>
     </div>
 
-    <!-- Step 2: Server -> Client SYN-ACK (composite) -->
+    <!-- Step 2: Server -> Client (two-part SYN-ACK) -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">←</div>
       <div style="opacity:.85;">Server</div>
 
-      <div class="slot" data-kind="combo" data-step="2" style="grid-column: 1 / -1;">
-        <div class="comboWrap">
-          <div class="miniSlot" data-part="1" data-accept="SYN">Drop SYN</div>
-          <div class="hyphen">-</div>
-          <div class="miniSlot" data-part="2" data-accept="ACK">Drop ACK</div>
-        </div>
+      <div class="pillRow">
+        <div class="slotPill" data-kind="part" data-part="1" data-accept="SYN" data-step="2a">Drop</div>
+        <div class="hyphen">-</div>
+        <div class="slotPill" data-kind="part" data-part="2" data-accept="ACK" data-step="2b">Drop</div>
       </div>
     </div>
 
-    <!-- Step 3: Client -> Server ACK -->
+    <!-- Step 3: Client -> Server -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">→</div>
       <div style="opacity:.85;">Server</div>
 
-      <div class="slot" data-kind="single" data-accept="ACK" data-step="3" style="grid-column: 1 / -1;">
-        Drop message #3 (ACK) here
+      <div class="pillRow">
+        <div class="slotPill" data-kind="single" data-accept="ACK" data-step="3">Drop</div>
       </div>
     </div>
 
@@ -149,33 +162,37 @@
 
   <section class="panel">
     <h2>Cards</h2>
-    <div class="hint">You have exactly enough cards to complete the handshake:</div>
+    <div class="hint muted">You may not need every card.</div>
     <div class="tray" id="tray">
-      <!-- Two SYN cards -->
+      <!-- Two SYN -->
       <div class="card" draggable="true" data-msg="SYN" data-cardid="syn1">SYN</div>
       <div class="card" draggable="true" data-msg="SYN" data-cardid="syn2">SYN</div>
 
-      <!-- Two ACK cards -->
+      <!-- Two ACK -->
       <div class="card" draggable="true" data-msg="ACK" data-cardid="ack1">ACK</div>
       <div class="card" draggable="true" data-msg="ACK" data-cardid="ack2">ACK</div>
+
+      <!-- Distractors -->
+      <div class="card" draggable="true" data-msg="RST" data-cardid="rst1">RST</div>
+      <div class="card" draggable="true" data-msg="FIN" data-cardid="fin1">FIN</div>
     </div>
-    <div class="hint">Step #2 must become <b>SYN-ACK</b> by placing <b>SYN</b> then <b>ACK</b> in the two-part slot.</div>
   </section>
 </main>
 
 <script>
   const statusEl = document.getElementById("status");
   const cards = [...document.querySelectorAll(".card")];
-  const singleSlots = [...document.querySelectorAll(".slot[data-kind='single']")];
-  const comboSlots = [...document.querySelectorAll(".slot[data-kind='combo']")];
-  const miniSlots = [...document.querySelectorAll(".miniSlot")];
+  const slots = [...document.querySelectorAll(".slotPill")];
+
+  // Light obfuscation (base64). Not secure—just prevents instant visual scanning in source.
+  // "FLAG{S3CR3T_H4ND5H4K3}"
+  const FLAG_B64 = "RkxBR3tTM0NSM1RfSDRORDVINEszfQ==";
 
   function setStatus(text, cls) {
     statusEl.textContent = text || "";
     statusEl.className = cls || "";
   }
 
-  // Track what card is currently being dragged
   let dragged = { msg: null, cardId: null };
 
   cards.forEach(card => {
@@ -202,37 +219,11 @@
     card.classList.toggle("used", !!used);
   }
 
-  // Allow drop helper
   function allowDrop(el) {
     el.addEventListener("dragover", (e) => e.preventDefault());
   }
 
-  // SINGLE slots (Step 1 and Step 3)
-  singleSlots.forEach(slot => {
-    allowDrop(slot);
-
-    slot.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const payload = getDragPayload(e);
-      if (!payload) return;
-
-      // If this slot already had a card, un-use that card
-      if (slot.dataset.filledCardId) {
-        markCardUsed(slot.dataset.filledCardId, false);
-      }
-
-      slot.dataset.filledMsg = payload.msg;
-      slot.dataset.filledCardId = payload.cardId;
-      slot.textContent = payload.msg;
-
-      markCardUsed(payload.cardId, true);
-
-      validateSingle(slot);
-      setStatus("", "");
-    });
-  });
-
-  function validateSingle(slot) {
+  function validateSlot(slot) {
     const accept = slot.dataset.accept;
     const got = slot.dataset.filledMsg;
 
@@ -243,89 +234,62 @@
     else slot.classList.add("bad");
   }
 
-  // MINI slots (the two-part SYN-ACK builder)
-  miniSlots.forEach(ms => {
-    allowDrop(ms);
+  slots.forEach(slot => {
+    allowDrop(slot);
 
-    ms.addEventListener("drop", (e) => {
+    slot.addEventListener("drop", (e) => {
       e.preventDefault();
       const payload = getDragPayload(e);
       if (!payload) return;
 
-      // If this mini-slot already had a card, un-use it
-      if (ms.dataset.filledCardId) {
-        markCardUsed(ms.dataset.filledCardId, false);
+      // If this slot already had a card, free it
+      if (slot.dataset.filledCardId) {
+        markCardUsed(slot.dataset.filledCardId, false);
       }
 
-      ms.dataset.filledMsg = payload.msg;
-      ms.dataset.filledCardId = payload.cardId;
-      ms.textContent = payload.msg;
+      slot.dataset.filledMsg = payload.msg;
+      slot.dataset.filledCardId = payload.cardId;
+      slot.textContent = payload.msg;
 
       markCardUsed(payload.cardId, true);
 
-      validateMini(ms);
+      validateSlot(slot);
       setStatus("", "");
     });
   });
 
-  function validateMini(ms) {
-    const accept = ms.dataset.accept;
-    const got = ms.dataset.filledMsg;
-
-    ms.classList.remove("good", "bad");
-    if (!got) return;
-
-    if (got === accept) ms.classList.add("good");
-    else ms.classList.add("bad");
-  }
-
   function checkAll() {
-    // validate singles
-    singleSlots.forEach(validateSingle);
-    // validate minis
-    miniSlots.forEach(validateMini);
+    slots.forEach(validateSlot);
 
-    const singlesFilled = singleSlots.every(s => s.dataset.filledMsg);
-    const minisFilled = miniSlots.every(s => s.dataset.filledMsg);
+    const allFilled = slots.every(s => s.dataset.filledMsg);
+    const allCorrect = slots.every(s => s.dataset.filledMsg === s.dataset.accept);
 
-    const singlesCorrect = singleSlots.every(s => s.dataset.filledMsg === s.dataset.accept);
-    const minisCorrect = miniSlots.every(ms => ms.dataset.filledMsg === ms.dataset.accept);
-
-    if (!singlesFilled || !minisFilled) {
-      setStatus("Some slots are empty.", "no");
+    if (!allFilled) {
+      setStatus("Some steps are still empty.", "no");
       return;
     }
 
-    if (singlesCorrect && minisCorrect) setStatus("All correct ✅", "ok");
-    else setStatus("Not quite — something is incorrect.", "no");
+    if (allCorrect) {
+      const flag = atob(FLAG_B64);
+      setStatus(`Connection ESTABLISHED ✅ Here's your flag: ${flag}`, "ok");
+    } else {
+      setStatus("Connection NOT established ❌ Try again.", "no");
+    }
   }
 
   function resetAll() {
-    // reset singles
-    singleSlots.forEach(slot => {
+    // clear slots
+    slots.forEach(slot => {
       slot.classList.remove("good", "bad");
       if (slot.dataset.filledCardId) markCardUsed(slot.dataset.filledCardId, false);
       delete slot.dataset.filledMsg;
       delete slot.dataset.filledCardId;
-
-      const n = slot.dataset.step;
-      slot.textContent = (n === "1")
-        ? "Drop message #1 (SYN) here"
-        : "Drop message #3 (ACK) here";
+      slot.textContent = "Drop";
     });
 
-    // reset minis
-    miniSlots.forEach(ms => {
-      ms.classList.remove("good", "bad");
-      if (ms.dataset.filledCardId) markCardUsed(ms.dataset.filledCardId, false);
-      delete ms.dataset.filledMsg;
-      delete ms.dataset.filledCardId;
-
-      ms.textContent = (ms.dataset.accept === "SYN") ? "Drop SYN" : "Drop ACK";
-    });
-
-    // ensure all cards are available
+    // free cards
     cards.forEach(c => c.classList.remove("used"));
+
     setStatus("", "");
   }
 
