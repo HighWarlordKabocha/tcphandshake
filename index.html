@@ -16,7 +16,6 @@
     .step { display:grid; grid-template-columns: 1fr 120px 1fr; align-items:center; gap: 10px; }
     .arrow { text-align:center; font-size: 18px; opacity: .95; user-select:none; }
 
-    /* "Pill" slots and cards */
     .pillRow {
       grid-column: 1 / -1;
       display:flex;
@@ -28,6 +27,7 @@
       background: rgba(148,163,184,.06);
       border: 1px solid rgba(226,232,240,.12);
     }
+
     .slotPill {
       min-width: 110px;
       min-height: 42px;
@@ -41,9 +41,19 @@
       padding: 4px 12px;
       font-weight: 700;
       user-select:none;
+      transition: all .15s ease;
     }
-    .slotPill.good { border-style: solid; border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.12); color:#bbf7d0; }
-    .slotPill.bad  { border-style: solid; border-color: rgba(239,68,68,.7); background: rgba(239,68,68,.12); color:#fecaca; }
+
+    /* NEW: stronger indicator when filled */
+    .slotPill.filled {
+      border-style: solid;
+      border-color: rgba(226,232,240,.55);
+      background: rgba(148,163,184,.14);
+      color: #e2e8f0;
+    }
+
+    .slotPill.good { border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.12); color:#bbf7d0; }
+    .slotPill.bad  { border-color: rgba(239,68,68,.7); background: rgba(239,68,68,.12); color:#fecaca; }
 
     .hyphen { opacity:.7; font-weight:900; }
 
@@ -97,7 +107,7 @@
 </header>
 
 <main>
-  <!-- LEFT: Instructions -->
+  <!-- LEFT PANEL -->
   <section class="panel">
     <h2>TCP Connections</h2>
     <div class="hint">
@@ -126,61 +136,56 @@
     </div>
   </section>
 
-  <!-- MIDDLE: Handshake Lane -->
-  <section class="panel lane" aria-label="Message lane">
+  <!-- HANDSHAKE LANE -->
+  <section class="panel lane">
 
-    <!-- Step 1: Client -> Server -->
+    <!-- Step 1 -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">→</div>
       <div style="opacity:.85;">Server</div>
 
       <div class="pillRow">
-        <div class="slotPill" data-kind="single" data-accept="SYN" data-step="1">Drop</div>
+        <div class="slotPill" data-accept="SYN">Drop</div>
       </div>
     </div>
 
-    <!-- Step 2: Server -> Client (two-part SYN-ACK) -->
+    <!-- Step 2 -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">←</div>
       <div style="opacity:.85;">Server</div>
 
       <div class="pillRow">
-        <div class="slotPill" data-kind="part" data-part="1" data-accept="SYN" data-step="2a">Drop</div>
+        <div class="slotPill" data-accept="SYN">Drop</div>
         <div class="hyphen">-</div>
-        <div class="slotPill" data-kind="part" data-part="2" data-accept="ACK" data-step="2b">Drop</div>
+        <div class="slotPill" data-accept="ACK">Drop</div>
       </div>
     </div>
 
-    <!-- Step 3: Client -> Server (FINAL EXCHANGE RESTORED) -->
+    <!-- Step 3 -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">→</div>
       <div style="opacity:.85;">Server</div>
 
       <div class="pillRow">
-        <div class="slotPill" data-kind="single" data-accept="ACK" data-step="3">Drop</div>
+        <div class="slotPill" data-accept="ACK">Drop</div>
       </div>
     </div>
 
   </section>
 
-  <!-- RIGHT: Cards (RESTORED) -->
+  <!-- CARDS -->
   <section class="panel">
     <h2>Cards</h2>
     <div class="hint muted">You may not need every card.</div>
 
-    <div class="tray" id="tray">
-      <!-- Two SYN -->
+    <div class="tray">
       <div class="card" draggable="true" data-msg="SYN" data-cardid="syn1">SYN</div>
       <div class="card" draggable="true" data-msg="SYN" data-cardid="syn2">SYN</div>
-
-      <!-- Two ACK -->
       <div class="card" draggable="true" data-msg="ACK" data-cardid="ack1">ACK</div>
       <div class="card" draggable="true" data-msg="ACK" data-cardid="ack2">ACK</div>
-
-      <!-- Distractors -->
       <div class="card" draggable="true" data-msg="RST" data-cardid="rst1">RST</div>
       <div class="card" draggable="true" data-msg="FIN" data-cardid="fin1">FIN</div>
     </div>
@@ -192,8 +197,6 @@
   const cards = [...document.querySelectorAll(".card")];
   const slots = [...document.querySelectorAll(".slotPill")];
 
-  // Light obfuscation (base64). Not secure—just prevents instant visual scanning in source.
-  // "FLAG{S3CR3T_H4ND5H4K3}"
   const FLAG_B64 = "RkxBR3tTM0NSM1RfSDRORDVINEszfQ==";
 
   function setStatus(text, cls) {
@@ -213,11 +216,9 @@
 
   function getDragPayload(e) {
     try {
-      const raw = e.dataTransfer.getData("text/plain");
-      if (!raw) return null;
-      return JSON.parse(raw);
+      return JSON.parse(e.dataTransfer.getData("text/plain"));
     } catch {
-      return dragged.msg ? dragged : null;
+      return dragged;
     }
   }
 
@@ -231,12 +232,12 @@
     el.addEventListener("dragover", (e) => e.preventDefault());
   }
 
-  // Validation colors ONLY applied when Check is pressed
   function validateSlot(slot) {
     const accept = slot.dataset.accept;
     const got = slot.dataset.filledMsg;
 
     slot.classList.remove("good", "bad");
+
     if (!got) return false;
 
     if (got === accept) {
@@ -256,7 +257,6 @@
       const payload = getDragPayload(e);
       if (!payload) return;
 
-      // If this slot already had a card, free it
       if (slot.dataset.filledCardId) {
         markCardUsed(slot.dataset.filledCardId, false);
       }
@@ -267,8 +267,9 @@
 
       markCardUsed(payload.cardId, true);
 
-      // No immediate red/green feedback; clear any previous check coloring
+      slot.classList.add("filled");   // 🔥 NEW VISUAL INDICATOR
       slot.classList.remove("good", "bad");
+
       setStatus("", "");
     });
   });
@@ -281,7 +282,6 @@
       return;
     }
 
-    // Apply red/green now
     const allCorrect = slots.map(validateSlot).every(Boolean);
 
     if (allCorrect) {
@@ -294,7 +294,7 @@
 
   function resetAll() {
     slots.forEach(slot => {
-      slot.classList.remove("good", "bad");
+      slot.classList.remove("good", "bad", "filled"); // 🔥 remove filled state
       if (slot.dataset.filledCardId) markCardUsed(slot.dataset.filledCardId, false);
       delete slot.dataset.filledMsg;
       delete slot.dataset.filledCardId;
