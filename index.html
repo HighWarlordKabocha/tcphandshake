@@ -66,9 +66,11 @@
       user-select:none;
       font-weight: 800;
       letter-spacing: .3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .card:active { cursor: grabbing; }
-    .card.used { opacity: .35; pointer-events:none; }
 
     .controls { display:flex; gap: 10px; margin-top: 10px; }
     button {
@@ -84,30 +86,37 @@
 
     .hint { font-size: 13px; opacity:.85; margin-top: 8px; line-height: 1.35; }
     .hint h3 { margin: 10px 0 4px; font-size: 14px; color:#cbd5e1; }
-    .ok  { color:#86efac; }
-    .no  { color:#fca5a5; }
     .muted { opacity:.75; }
 
-    /* NEW: bottom-left status banner */
-    #statusBanner {
-      position: fixed;
-      left: 16px;
-      bottom: 16px;
-      z-index: 9999;
-      max-width: min(720px, calc(100vw - 32px));
-      padding: 10px 12px;
+    /* Server state panel styling */
+    .stateBox {
+      margin-top: 10px;
+      padding: 12px;
       border-radius: 12px;
-      border: 1px solid rgba(226,232,240,.18);
-      background: rgba(17,24,39,.92);
-      backdrop-filter: blur(8px);
+      border: 1px solid rgba(226,232,240,.15);
+      background: rgba(148,163,184,.06);
+    }
+    .stateLine {
       font-weight: 900;
-      line-height: 1.25;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-      display: none; /* shown when message exists */
+      letter-spacing: .3px;
+      display:flex;
+      gap: 8px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .stateLabel { opacity: .8; font-weight: 800; }
+    .stateValue { font-weight: 950; }
+    .stateValue.listen { color:#93c5fd; }
+    .stateValue.established { color:#86efac; }
+
+    .flagLine {
+      margin-top: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      font-weight: 900;
+      display: none; /* shown only when ESTABLISHED */
       word-break: break-word;
     }
-    #statusBanner.ok  { border-color: rgba(34,197,94,.55); color:#86efac; }
-    #statusBanner.no  { border-color: rgba(239,68,68,.55); color:#fca5a5; }
 
     @media (max-width: 1050px) {
       main { grid-template-columns: 1fr; }
@@ -122,8 +131,6 @@
       <div style="font-weight:900; font-size:18px;">TCP Three-Way Handshake</div>
       <div class="muted" style="font-size:13px;">Drag the TCP flag cards into the lane to form a valid handshake.</div>
     </div>
-    <!-- keep this element for compatibility, but it's no longer used for messages -->
-    <div id="status" style="font-weight:900; display:none;"></div>
   </div>
 </header>
 
@@ -151,8 +158,16 @@
       Click <b>Reset</b> to try again.
     </div>
 
+    <!-- UPDATED: "Server Status" label -->
+    <div class="stateBox" aria-live="polite">
+      <div class="stateLine">
+        <span class="stateLabel">Server Status:</span>
+        <span id="serverState" class="stateValue listen">LISTEN</span>
+      </div>
+      <div id="flagLine" class="flagLine">FLAG{S3CR3T_H4ND5H4KE}</div>
+    </div>
+
     <div class="controls">
-      <!-- SWAPPED: Check on the left, Reset on the right -->
       <button id="checkBtn">Check</button>
       <button id="resetBtn">Reset</button>
     </div>
@@ -160,13 +175,11 @@
 
   <!-- HANDSHAKE LANE -->
   <section class="panel lane">
-
     <!-- Step 1 -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">→</div>
       <div style="opacity:.85;">Server</div>
-
       <div class="pillRow">
         <div class="slotPill" data-accept="SYN">Drop</div>
       </div>
@@ -177,7 +190,6 @@
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">←</div>
       <div style="opacity:.85;">Server</div>
-
       <div class="pillRow">
         <div class="slotPill" data-accept="SYN">Drop</div>
         <div class="hyphen">-</div>
@@ -190,59 +202,52 @@
       <div style="text-align:right; opacity:.85;">Client</div>
       <div class="arrow">→</div>
       <div style="opacity:.85;">Server</div>
-
       <div class="pillRow">
         <div class="slotPill" data-accept="ACK">Drop</div>
       </div>
     </div>
-
   </section>
 
   <!-- CARDS -->
   <section class="panel">
     <h2>Cards</h2>
-    <div class="hint muted">You may not need every card.</div>
+    <div class="hint muted">Some cards are used more than once.</div>
 
     <div class="tray">
-      <div class="card" draggable="true" data-msg="SYN" data-cardid="syn1">SYN</div>
-      <div class="card" draggable="true" data-msg="SYN" data-cardid="syn2">SYN</div>
-      <div class="card" draggable="true" data-msg="ACK" data-cardid="ack1">ACK</div>
-      <div class="card" draggable="true" data-msg="ACK" data-cardid="ack2">ACK</div>
-      <div class="card" draggable="true" data-msg="RST" data-cardid="rst1">RST</div>
-      <div class="card" draggable="true" data-msg="FIN" data-cardid="fin1">FIN</div>
+      <div class="card" draggable="true" data-msg="SYN">SYN</div>
+      <div class="card" draggable="true" data-msg="ACK">ACK</div>
+      <div class="card" draggable="true" data-msg="RST">RST</div>
+      <div class="card" draggable="true" data-msg="FIN">FIN</div>
     </div>
   </section>
 </main>
-
-<!-- NEW: bottom-left message banner -->
-<div id="statusBanner" aria-live="polite"></div>
 
 <script>
   const cards = [...document.querySelectorAll(".card")];
   const slots = [...document.querySelectorAll(".slotPill")];
 
-  const statusBannerEl = document.getElementById("statusBanner");
+  // Server state elements
+  const serverStateEl = document.getElementById("serverState");
+  const flagLineEl = document.getElementById("flagLine");
 
-  const BANNER_B64 = "RkxBR3tTM0NSM1RfSDRORDVINEszfQ==";
+  function setServerState(state) {
+    // state: "LISTEN" | "ESTABLISHED"
+    serverStateEl.textContent = state;
 
-  function setStatus(text, cls) {
-    statusBannerEl.textContent = text || "";
-    statusBannerEl.className = cls ? cls : "";
-    if (text) {
-      statusBannerEl.style.display = "block";
-      if (cls) statusBannerEl.classList.add(cls);
+    serverStateEl.classList.remove("listen", "established");
+    if (state === "ESTABLISHED") {
+      serverStateEl.classList.add("established");
+      flagLineEl.style.display = "block";
     } else {
-      statusBannerEl.style.display = "none";
+      serverStateEl.classList.add("listen");
+      flagLineEl.style.display = "none";
     }
   }
 
-  let dragged = { msg: null, cardId: null };
-
+  // Reusable cards: payload only needs the message
   cards.forEach(card => {
     card.addEventListener("dragstart", (e) => {
-      dragged.msg = card.dataset.msg;
-      dragged.cardId = card.dataset.cardid;
-      e.dataTransfer.setData("text/plain", JSON.stringify(dragged));
+      e.dataTransfer.setData("text/plain", JSON.stringify({ msg: card.dataset.msg }));
     });
   });
 
@@ -250,14 +255,8 @@
     try {
       return JSON.parse(e.dataTransfer.getData("text/plain"));
     } catch {
-      return dragged;
+      return null;
     }
-  }
-
-  function markCardUsed(cardId, used) {
-    const card = document.querySelector(`.card[data-cardid="${cardId}"]`);
-    if (!card) return;
-    card.classList.toggle("used", !!used);
   }
 
   function allowDrop(el) {
@@ -287,22 +286,16 @@
     slot.addEventListener("drop", (e) => {
       e.preventDefault();
       const payload = getDragPayload(e);
-      if (!payload) return;
-
-      if (slot.dataset.filledCardId) {
-        markCardUsed(slot.dataset.filledCardId, false);
-      }
+      if (!payload || !payload.msg) return;
 
       slot.dataset.filledMsg = payload.msg;
-      slot.dataset.filledCardId = payload.cardId;
       slot.textContent = payload.msg;
-
-      markCardUsed(payload.cardId, true);
 
       slot.classList.add("filled");
       slot.classList.remove("good", "bad");
 
-      setStatus("", "");
+      // Any interaction returns to LISTEN until a successful Check
+      setServerState("LISTEN");
     });
   });
 
@@ -310,31 +303,26 @@
     const allFilled = slots.every(s => s.dataset.filledMsg);
 
     if (!allFilled) {
-      setStatus("Some steps are still empty.", "no");
+      setServerState("LISTEN");
       return;
     }
 
     const allCorrect = slots.map(validateSlot).every(Boolean);
 
     if (allCorrect) {
-      const BANNER = atob(BANNER_B64);
-      setStatus(`Connection ESTABLISHED ✅ ${BANNER}`, "ok");
+      setServerState("ESTABLISHED");
     } else {
-      setStatus("Connection NOT established ❌ Try again.", "no");
+      setServerState("LISTEN");
     }
   }
 
   function resetAll() {
     slots.forEach(slot => {
       slot.classList.remove("good", "bad", "filled");
-      if (slot.dataset.filledCardId) markCardUsed(slot.dataset.filledCardId, false);
       delete slot.dataset.filledMsg;
-      delete slot.dataset.filledCardId;
       slot.textContent = "Drop";
     });
-
-    cards.forEach(c => c.classList.remove("used"));
-    setStatus("", "");
+    setServerState("LISTEN");
   }
 
   document.getElementById("checkBtn").addEventListener("click", checkAll);
