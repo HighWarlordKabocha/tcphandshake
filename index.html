@@ -14,7 +14,71 @@
 
     .lane { min-height: 420px; display:flex; flex-direction:column; gap: 18px; }
     .step { display:grid; grid-template-columns: 1fr 120px 1fr; align-items:center; gap: 10px; }
-    .arrow { text-align:center; font-size: 18px; opacity: .95; user-select:none; }
+
+    .arrow {
+      text-align:center;
+      font-size: 18px;
+      opacity: .95;
+      user-select:none;
+      position: relative;
+      height: 34px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow: visible;
+    }
+
+    /* Track line is invisible */
+    .arrow::after{
+      content:"";
+      position:absolute;
+      left: 14px;
+      right: 14px;
+      top: 50%;
+      height: 2px;
+      transform: translateY(-50%);
+      background: transparent;
+      pointer-events:none;
+    }
+
+    .packet {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 950;
+      font-size: 12px;
+      letter-spacing: .3px;
+      border: 1px solid rgba(226,232,240,.18);
+      background: rgba(148,163,184,.12);
+      opacity: 0;
+      pointer-events:none;
+      white-space: nowrap;
+    }
+    .packet.ok {
+      border-color: rgba(34,197,94,.55);
+      background: rgba(34,197,94,.14);
+      color: #bbf7d0;
+    }
+    .packet.no {
+      border-color: rgba(239,68,68,.55);
+      background: rgba(239,68,68,.14);
+      color: #fecaca;
+    }
+
+    @keyframes moveLTR {
+      0%   { left: 14px; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { left: calc(100% - 14px); opacity: 0; }
+    }
+    @keyframes moveRTL {
+      0%   { left: calc(100% - 14px); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { left: 14px; opacity: 0; }
+    }
 
     .pillRow {
       grid-column: 1 / -1;
@@ -71,6 +135,7 @@
       justify-content: center;
     }
     .card:active { cursor: grabbing; }
+    .card.disabled { opacity: .45; cursor: not-allowed; }
 
     .controls { display:flex; gap: 10px; margin-top: 10px; }
     button {
@@ -83,19 +148,21 @@
       font-weight: 700;
     }
     button:hover { background: rgba(226,232,240,.12); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
 
     .hint { font-size: 13px; opacity:.85; margin-top: 8px; line-height: 1.35; }
     .hint h3 { margin: 10px 0 4px; font-size: 14px; color:#cbd5e1; }
     .muted { opacity:.75; }
 
-    /* Server state panel styling */
-    .stateBox {
-      margin-top: 10px;
+    /* Server status + lesson card styling (right panel) */
+    .infoCard {
+      margin-top: 12px;
       padding: 12px;
       border-radius: 12px;
       border: 1px solid rgba(226,232,240,.15);
       background: rgba(148,163,184,.06);
     }
+
     .stateLine {
       font-weight: 900;
       letter-spacing: .3px;
@@ -109,13 +176,36 @@
     .stateValue.listen { color:#93c5fd; }
     .stateValue.established { color:#86efac; }
 
-    .flagLine {
-      margin-top: 6px;
+    /* Lesson card (hidden until established) */
+    #lessonCard { display: none; }
+    #lessonCard .lessonTitle {
+      font-weight: 950;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      letter-spacing: .2px;
+    }
+    #lessonCard .lessonBody {
+      font-size: 13px;
+      opacity: .9;
+      line-height: 1.45;
+    }
+    #lessonCard ul {
+      margin: 8px 0 8px 18px;
+      padding: 0;
+    }
+    #lessonCard li { margin: 4px 0; }
+
+    /* NEW: flag appears at bottom of lesson card */
+    #lessonFlag {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(226,232,240,.12);
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 13px;
       font-weight: 900;
-      display: none; /* shown only when ESTABLISHED */
+      display: none;
       word-break: break-word;
+      color: #bbf7d0;
     }
 
     @media (max-width: 1050px) {
@@ -146,7 +236,6 @@
       <h3>The TCP Three-Way Handshake</h3>
       To start a connection, TCP uses a process called the three-way handshake.
       This is a short exchange of packets between a client and a server that confirms both sides are ready to communicate.
-
       Each packet contains special control flags that describe its purpose.
 
       <h3>Your Challenge</h3>
@@ -154,17 +243,8 @@
       Arrange the cards so the connection is properly established.
 
       <h3>Check Your Work</h3>
-      Click <b>Check</b> to see if your answer is correct.
+      Click <b>Check</b> to watch the handshake play.
       Click <b>Reset</b> to try again.
-    </div>
-
-    <!-- UPDATED: "Server Status" label -->
-    <div class="stateBox" aria-live="polite">
-      <div class="stateLine">
-        <span class="stateLabel">Server Status:</span>
-        <span id="serverState" class="stateValue listen">LISTEN</span>
-      </div>
-      <div id="flagLine" class="flagLine">FLAG{S3CR3T_H4ND5H4KE}</div>
     </div>
 
     <div class="controls">
@@ -175,11 +255,17 @@
 
   <!-- HANDSHAKE LANE -->
   <section class="panel lane">
+    <h2>Three-Way Handshake</h2>
+
     <!-- Step 1 -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
-      <div class="arrow">→</div>
+      <div class="arrow">
+        →
+        <div class="packet" id="pkt1"></div>
+      </div>
       <div style="opacity:.85;">Server</div>
+
       <div class="pillRow">
         <div class="slotPill" data-accept="SYN">Drop</div>
       </div>
@@ -188,8 +274,12 @@
     <!-- Step 2 -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
-      <div class="arrow">←</div>
+      <div class="arrow">
+        ←
+        <div class="packet" id="pkt2"></div>
+      </div>
       <div style="opacity:.85;">Server</div>
+
       <div class="pillRow">
         <div class="slotPill" data-accept="SYN">Drop</div>
         <div class="hyphen">-</div>
@@ -200,24 +290,56 @@
     <!-- Step 3 -->
     <div class="step">
       <div style="text-align:right; opacity:.85;">Client</div>
-      <div class="arrow">→</div>
+      <div class="arrow">
+        →
+        <div class="packet" id="pkt3"></div>
+      </div>
       <div style="opacity:.85;">Server</div>
+
       <div class="pillRow">
         <div class="slotPill" data-accept="ACK">Drop</div>
       </div>
     </div>
   </section>
 
-  <!-- CARDS -->
+  <!-- CARDS + STATUS + LESSON -->
   <section class="panel">
     <h2>Cards</h2>
     <div class="hint muted">Some cards are used more than once.</div>
 
     <div class="tray">
-      <div class="card" draggable="true" data-msg="SYN">SYN</div>
-      <div class="card" draggable="true" data-msg="ACK">ACK</div>
-      <div class="card" draggable="true" data-msg="RST">RST</div>
-      <div class="card" draggable="true" data-msg="FIN">FIN</div>
+      <div class="card" draggable="true" data-msg="SYN" title="Synchronize">SYN</div>
+      <div class="card" draggable="true" data-msg="ACK" title="Acknowledge">ACK</div>
+      <div class="card" draggable="true" data-msg="RST" title="Reset">RST</div>
+      <div class="card" draggable="true" data-msg="FIN" title="Finish">FIN</div>
+    </div>
+
+    <!-- Server Status (no flag here anymore) -->
+    <div class="infoCard" aria-live="polite">
+      <div class="stateLine">
+        <span class="stateLabel">Server Status:</span>
+        <span id="serverState" class="stateValue listen">LISTEN</span>
+      </div>
+    </div>
+
+    <!-- Lesson Card (shown only when established) -->
+    <div id="lessonCard" class="infoCard">
+      <div class="lessonTitle">Lesson: What Just Happened?</div>
+      <div class="lessonBody">
+        <div style="font-weight:950; margin-bottom:6px;">Handshake complete.</div>
+        <ul>
+          <li><b>SYN:</b> Client asks to start a connection.</li>
+          <li><b>SYN-ACK:</b> Server agrees and responds.</li>
+          <li><b>ACK:</b> Client confirms the server’s response.</li>
+        </ul>
+        <div>
+          The handshake makes sure both computers are ready before real data starts moving.
+          That helps TCP be reliable.
+        </div>
+
+        <!-- MOVED + UPDATED FLAG -->
+        <div id="lessonFlag">FLAG{S3CR3T_H4ND5H4K3}</div>
+      </div>
     </div>
   </section>
 </main>
@@ -226,41 +348,68 @@
   const cards = [...document.querySelectorAll(".card")];
   const slots = [...document.querySelectorAll(".slotPill")];
 
-  // Server state elements
+  const checkBtn = document.getElementById("checkBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  // Server status + lesson elements (in the Cards panel)
   const serverStateEl = document.getElementById("serverState");
-  const flagLineEl = document.getElementById("flagLine");
+  const lessonCardEl = document.getElementById("lessonCard");
+  const lessonFlagEl = document.getElementById("lessonFlag");
+
+  // Packet elements
+  const pkt1 = document.getElementById("pkt1");
+  const pkt2 = document.getElementById("pkt2");
+  const pkt3 = document.getElementById("pkt3");
+
+  let animating = false;
 
   function setServerState(state) {
-    // state: "LISTEN" | "ESTABLISHED"
     serverStateEl.textContent = state;
 
     serverStateEl.classList.remove("listen", "established");
     if (state === "ESTABLISHED") {
       serverStateEl.classList.add("established");
-      flagLineEl.style.display = "block";
+      lessonCardEl.style.display = "block";
+      lessonFlagEl.style.display = "block";
     } else {
       serverStateEl.classList.add("listen");
-      flagLineEl.style.display = "none";
+      lessonCardEl.style.display = "none";
+      lessonFlagEl.style.display = "none";
     }
   }
 
-  // Reusable cards: payload only needs the message
+  function setInteractivity(enabled) {
+    checkBtn.disabled = !enabled;
+    resetBtn.disabled = !enabled;
+
+    cards.forEach(c => {
+      c.draggable = enabled;
+      c.classList.toggle("disabled", !enabled);
+    });
+
+    slots.forEach(s => {
+      s.style.pointerEvents = enabled ? "auto" : "none";
+      s.style.opacity = enabled ? "1" : ".85";
+    });
+  }
+
   cards.forEach(card => {
     card.addEventListener("dragstart", (e) => {
+      if (animating) return;
       e.dataTransfer.setData("text/plain", JSON.stringify({ msg: card.dataset.msg }));
     });
   });
 
   function getDragPayload(e) {
-    try {
-      return JSON.parse(e.dataTransfer.getData("text/plain"));
-    } catch {
-      return null;
-    }
+    try { return JSON.parse(e.dataTransfer.getData("text/plain")); }
+    catch { return null; }
   }
 
   function allowDrop(el) {
-    el.addEventListener("dragover", (e) => e.preventDefault());
+    el.addEventListener("dragover", (e) => {
+      if (animating) return;
+      e.preventDefault();
+    });
   }
 
   function validateSlot(slot) {
@@ -268,22 +417,56 @@
     const got = slot.dataset.filledMsg;
 
     slot.classList.remove("good", "bad");
-
     if (!got) return false;
 
-    if (got === accept) {
-      slot.classList.add("good");
-      return true;
-    } else {
-      slot.classList.add("bad");
-      return false;
-    }
+    if (got === accept) { slot.classList.add("good"); return true; }
+    slot.classList.add("bad");
+    return false;
+  }
+
+  // What the user actually placed
+  function getStep1Msg() { return slots[0]?.dataset.filledMsg || null; }
+  function getStep2Msgs() {
+    return {
+      left: slots[1]?.dataset.filledMsg || null,
+      right: slots[2]?.dataset.filledMsg || null
+    };
+  }
+  function getStep3Msg() { return slots[3]?.dataset.filledMsg || null; }
+
+  // Correctness per step (used for early-stop)
+  function step1Ok() {
+    const s1 = slots[0];
+    return !!s1?.dataset.filledMsg && s1.dataset.filledMsg === s1.dataset.accept;
+  }
+  function step2Ok() {
+    const s2a = slots[1];
+    const s2b = slots[2];
+    const okA = !!s2a?.dataset.filledMsg && s2a.dataset.filledMsg === s2a.dataset.accept;
+    const okB = !!s2b?.dataset.filledMsg && s2b.dataset.filledMsg === s2b.dataset.accept;
+    return okA && okB;
+  }
+  function step3Ok() {
+    const s3 = slots[3];
+    return !!s3?.dataset.filledMsg && s3.dataset.filledMsg === s3.dataset.accept;
+  }
+
+  // Only validate (color) slots up to the step we actually reached
+  function validateThroughStep(stepNum) {
+    // stepNum: 1..3
+    // slot indices: 0 (step1), 1-2 (step2), 3 (step3)
+    const indices = stepNum === 1 ? [0] : stepNum === 2 ? [0,1,2] : [0,1,2,3];
+    indices.forEach(i => {
+      const s = slots[i];
+      if (s && s.dataset.filledMsg) validateSlot(s);
+    });
   }
 
   slots.forEach(slot => {
     allowDrop(slot);
 
     slot.addEventListener("drop", (e) => {
+      if (animating) return;
       e.preventDefault();
       const payload = getDragPayload(e);
       if (!payload || !payload.msg) return;
@@ -294,39 +477,102 @@
       slot.classList.add("filled");
       slot.classList.remove("good", "bad");
 
-      // Any interaction returns to LISTEN until a successful Check
+      // Clear any previous validation color on drop
+      slot.classList.remove("good", "bad");
+
+      // Any edit returns to LISTEN and hides lesson/flag
       setServerState("LISTEN");
     });
   });
 
-  function checkAll() {
-    const allFilled = slots.every(s => s.dataset.filledMsg);
+  function clearPackets() {
+    [pkt1, pkt2, pkt3].forEach(p => {
+      p.textContent = "";
+      p.style.animation = "none";
+      void p.offsetWidth;
+      p.classList.remove("ok", "no");
+    });
+  }
 
-    if (!allFilled) {
-      setServerState("LISTEN");
-      return;
-    }
+  function playPacket(packetEl, direction, isOk, label, delayMs) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        packetEl.textContent = label;
+        packetEl.classList.add(isOk ? "ok" : "no");
+        packetEl.style.animation = `${direction === "rtl" ? "moveRTL" : "moveLTR"} 900ms ease-in-out 1`;
+        packetEl.addEventListener("animationend", () => resolve(), { once: true });
+      }, delayMs);
+    });
+  }
 
-    const allCorrect = slots.map(validateSlot).every(Boolean);
+  async function playHandshakeWithEarlyStop(s1OK, s2OK, s3OK, labels) {
+    animating = true;
+    setInteractivity(false);
+    clearPackets();
 
-    if (allCorrect) {
-      setServerState("ESTABLISHED");
-    } else {
-      setServerState("LISTEN");
-    }
+    // Show LISTEN during playback
+    setServerState("LISTEN");
+
+    // Step 1
+    await playPacket(pkt1, "ltr", s1OK, labels.step1 || "?", 0);
+    validateThroughStep(1);
+    if (!s1OK) { animating = false; setInteractivity(true); return; }
+
+    // Step 2
+    await playPacket(pkt2, "rtl", s2OK, labels.step2 || "?", 120);
+    validateThroughStep(2);
+    if (!s2OK) { animating = false; setInteractivity(true); return; }
+
+    // Step 3
+    await playPacket(pkt3, "ltr", s3OK, labels.step3 || "?", 120);
+    validateThroughStep(3);
+
+    // Final state
+    if (s1OK && s2OK && s3OK) setServerState("ESTABLISHED");
+    else setServerState("LISTEN");
+
+    animating = false;
+    setInteractivity(true);
+  }
+
+  async function checkAll() {
+    if (animating) return;
+
+    // IMPORTANT: don't pre-validate everything anymore.
+    // We'll validate only as steps play (to avoid tipping off future steps).
+
+    const s1OK = step1Ok();
+    const s2OK = step2Ok();
+    const s3OK = step3Ok();
+
+    const s1Msg = getStep1Msg();
+    const s2 = getStep2Msgs();
+    const s3Msg = getStep3Msg();
+
+    const labels = {
+      step1: s1Msg ?? "?",
+      step2: (s2.left && s2.right) ? `${s2.left}-${s2.right}` : "?",
+      step3: s3Msg ?? "?"
+    };
+
+    await playHandshakeWithEarlyStop(s1OK, s2OK, s3OK, labels);
   }
 
   function resetAll() {
+    if (animating) return;
+
     slots.forEach(slot => {
       slot.classList.remove("good", "bad", "filled");
       delete slot.dataset.filledMsg;
       slot.textContent = "Drop";
     });
+
+    clearPackets();
     setServerState("LISTEN");
   }
 
-  document.getElementById("checkBtn").addEventListener("click", checkAll);
-  document.getElementById("resetBtn").addEventListener("click", resetAll);
+  checkBtn.addEventListener("click", checkAll);
+  resetBtn.addEventListener("click", resetAll);
 
   resetAll();
 </script>
