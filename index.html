@@ -195,7 +195,7 @@
     }
     #lessonCard li { margin: 4px 0; }
 
-    /* NEW: flag appears at bottom of lesson card */
+    /* Flag appears at bottom of lesson card */
     #lessonFlag {
       margin-top: 10px;
       padding-top: 10px;
@@ -314,7 +314,7 @@
       <div class="card" draggable="true" data-msg="FIN" title="Finish">FIN</div>
     </div>
 
-    <!-- Server Status (no flag here anymore) -->
+    <!-- Server Status -->
     <div class="infoCard" aria-live="polite">
       <div class="stateLine">
         <span class="stateLabel">Server Status:</span>
@@ -337,8 +337,8 @@
           That helps TCP be reliable.
         </div>
 
-        <!-- MOVED + UPDATED FLAG -->
-        <div id="lessonFlag">FLAG{S3CR3T_H4ND5H4K3}</div>
+        <!-- change this placeholder text to the flag for the competition AND DELETE THIS COMMENT -->
+        <div id="lessonFlag">&lt;insert flag here&gt;</div>
       </div>
     </div>
   </section>
@@ -453,8 +453,6 @@
 
   // Only validate (color) slots up to the step we actually reached
   function validateThroughStep(stepNum) {
-    // stepNum: 1..3
-    // slot indices: 0 (step1), 1-2 (step2), 3 (step3)
     const indices = stepNum === 1 ? [0] : stepNum === 2 ? [0,1,2] : [0,1,2,3];
     indices.forEach(i => {
       const s = slots[i];
@@ -475,9 +473,6 @@
       slot.textContent = payload.msg;
 
       slot.classList.add("filled");
-      slot.classList.remove("good", "bad");
-
-      // Clear any previous validation color on drop
       slot.classList.remove("good", "bad");
 
       // Any edit returns to LISTEN and hides lesson/flag
@@ -510,7 +505,6 @@
     setInteractivity(false);
     clearPackets();
 
-    // Show LISTEN during playback
     setServerState("LISTEN");
 
     // Step 1
@@ -527,7 +521,6 @@
     await playPacket(pkt3, "ltr", s3OK, labels.step3 || "?", 120);
     validateThroughStep(3);
 
-    // Final state
     if (s1OK && s2OK && s3OK) setServerState("ESTABLISHED");
     else setServerState("LISTEN");
 
@@ -538,9 +531,7 @@
   async function checkAll() {
     if (animating) return;
 
-    // IMPORTANT: don't pre-validate everything anymore.
-    // We'll validate only as steps play (to avoid tipping off future steps).
-
+    // Don't pre-validate everything (prevents tipping off future steps).
     const s1OK = step1Ok();
     const s2OK = step2Ok();
     const s3OK = step3Ok();
